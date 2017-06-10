@@ -10,6 +10,8 @@ visitor_cb (CXCursor     cursor,
 	CXSourceLocation location;
 	enum CXCursorKind kind;
 	CXString kind_string;
+	gint *level = user_data;
+	gchar *level_str;
 
 	location = clang_getCursorLocation (cursor);
 	if (!clang_Location_isFromMainFile (location))
@@ -19,7 +21,16 @@ visitor_cb (CXCursor     cursor,
 
 	kind = clang_getCursorKind (cursor);
 	kind_string = clang_getCursorKindSpelling (kind);
-	g_print ("%s\n", clang_getCString (kind_string));
+
+	level_str = g_strnfill (*level * 2, ' ');
+
+	g_print ("%s%s\n",
+		 level_str,
+		 clang_getCString (kind_string));
+
+	(*level)++;
+	clang_visitChildren (cursor, visitor_cb, level);
+	(*level)--;
 
 	return CXChildVisit_Continue;
 }
@@ -31,6 +42,7 @@ main (int    argc,
 	CXIndex index;
 	CXTranslationUnit translation_unit;
 	CXCursor root_cursor;
+	gint level;
 
 	if (argc != 2)
 	{
@@ -45,7 +57,9 @@ main (int    argc,
 								      0, NULL);
 
 	root_cursor = clang_getTranslationUnitCursor (translation_unit);
-	clang_visitChildren (root_cursor, visitor_cb, NULL);
+
+	level = 0;
+	clang_visitChildren (root_cursor, visitor_cb, &level);
 
 	clang_disposeTranslationUnit (translation_unit);
 	clang_disposeIndex (index);
