@@ -8,6 +8,37 @@ typedef struct
 	gint level;
 } Data;
 
+static void
+print_tokens (Data          *data,
+	      CXSourceRange  range,
+	      const gchar   *level_str)
+{
+	CXToken *tokens;
+	unsigned int n_tokens;
+	unsigned int i;
+
+	clang_tokenize (data->translation_unit,
+			range,
+			&tokens,
+			&n_tokens);
+
+	for (i = 0; i < n_tokens; i++)
+	{
+		CXToken cur_token = tokens[i];
+		CXString token_string;
+
+		token_string = clang_getTokenSpelling (data->translation_unit, cur_token);
+
+		g_print ("%s  token: %s\n",
+			 level_str,
+			 clang_getCString (token_string));
+
+		clang_disposeString (token_string);
+	}
+
+	clang_disposeTokens (data->translation_unit, tokens, n_tokens);
+}
+
 static enum CXChildVisitResult
 visitor_cb (CXCursor     cursor,
 	    CXCursor     parent,
@@ -56,9 +87,16 @@ visitor_cb (CXCursor     cursor,
 		clang_getSpellingLocation (end, NULL, &line, &column, &offset);
 		g_print (" -> [line=%u, col=%u, offset=%u]",
 			 line, column, offset);
+
+		g_print ("\n");
+		print_tokens (data, range, level_str);
+	}
+	else
+	{
+		g_print ("\n");
 	}
 
-	g_print ("\n");
+	g_free (level_str);
 
 	data->level++;
 	clang_visitChildren (cursor, visitor_cb, data);
