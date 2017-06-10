@@ -2,6 +2,12 @@
 #include <glib.h>
 #include <clang-c/Index.h>
 
+typedef struct
+{
+	CXTranslationUnit translation_unit;
+	gint level;
+} Data;
+
 static enum CXChildVisitResult
 visitor_cb (CXCursor     cursor,
 	    CXCursor     parent,
@@ -10,7 +16,7 @@ visitor_cb (CXCursor     cursor,
 	CXSourceLocation location;
 	enum CXCursorKind kind;
 	CXString kind_string;
-	gint *level = user_data;
+	Data *data = user_data;
 	gchar *level_str;
 
 	location = clang_getCursorLocation (cursor);
@@ -22,7 +28,7 @@ visitor_cb (CXCursor     cursor,
 	kind = clang_getCursorKind (cursor);
 	kind_string = clang_getCursorKindSpelling (kind);
 
-	level_str = g_strnfill (*level * 2, ' ');
+	level_str = g_strnfill (data->level * 2, ' ');
 
 	g_print ("%s%s",
 		 level_str,
@@ -54,9 +60,9 @@ visitor_cb (CXCursor     cursor,
 
 	g_print ("\n");
 
-	(*level)++;
-	clang_visitChildren (cursor, visitor_cb, level);
-	(*level)--;
+	data->level++;
+	clang_visitChildren (cursor, visitor_cb, data);
+	data->level--;
 
 	return CXChildVisit_Continue;
 }
@@ -66,9 +72,8 @@ main (int    argc,
       char **argv)
 {
 	CXIndex index;
-	CXTranslationUnit translation_unit;
 	CXCursor root_cursor;
-	gint level;
+	Data data;
 
 	if (argc != 2)
 	{
@@ -77,17 +82,17 @@ main (int    argc,
 	}
 
 	index = clang_createIndex (0, 1);
-	translation_unit = clang_createTranslationUnitFromSourceFile (index,
-								      argv[1],
-								      0, NULL,
-								      0, NULL);
+	data.translation_unit = clang_createTranslationUnitFromSourceFile (index,
+									   argv[1],
+									   0, NULL,
+									   0, NULL);
 
-	root_cursor = clang_getTranslationUnitCursor (translation_unit);
+	root_cursor = clang_getTranslationUnitCursor (data.translation_unit);
 
-	level = 0;
-	clang_visitChildren (root_cursor, visitor_cb, &level);
+	data.level = 0;
+	clang_visitChildren (root_cursor, visitor_cb, &data);
 
-	clang_disposeTranslationUnit (translation_unit);
+	clang_disposeTranslationUnit (data.translation_unit);
 	clang_disposeIndex (index);
 
 	return EXIT_SUCCESS;
