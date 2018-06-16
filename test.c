@@ -115,7 +115,7 @@ main (int    argc,
 
 	if (argc != 2)
 	{
-		g_printerr ("Usage: %s <file.c>\n", argv[0]);
+		g_printerr ("Usage: %s <file.[ch]>\n", argv[0]);
 		return EXIT_FAILURE;
 	}
 
